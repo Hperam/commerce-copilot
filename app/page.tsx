@@ -316,7 +316,7 @@ export default function Page() {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const recognitionRef = useRef<SpeechRecognition | null>(null)
+  const recognitionRef = useRef<{ start(): void; stop(): void } | null>(null)
   const resultsRef = useRef<HTMLDivElement>(null)
 
   const categories = getCategories(catalog as Product[])
@@ -328,8 +328,21 @@ export default function Page() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const SR = (window as Window & { SpeechRecognition?: typeof SpeechRecognition; webkitSpeechRecognition?: typeof SpeechRecognition }).SpeechRecognition
-      || (window as Window & { webkitSpeechRecognition?: typeof SpeechRecognition }).webkitSpeechRecognition
+    type SpeechRecognitionCtor = new () => {
+      lang: string
+      interimResults: boolean
+      maxAlternatives: number
+      start(): void
+      stop(): void
+      onresult: ((e: { results: SpeechRecognitionResultList }) => void) | null
+      onend: (() => void) | null
+      onerror: (() => void) | null
+    }
+    const win = window as Window & {
+      SpeechRecognition?: SpeechRecognitionCtor
+      webkitSpeechRecognition?: SpeechRecognitionCtor
+    }
+    const SR = win.SpeechRecognition || win.webkitSpeechRecognition
     if (!SR) return
 
     const rec = new SR()
@@ -337,7 +350,7 @@ export default function Page() {
     rec.interimResults = true
     rec.maxAlternatives = 1
 
-    rec.onresult = (e: SpeechRecognitionEvent) => {
+    rec.onresult = (e: { results: SpeechRecognitionResultList }) => {
       const t = Array.from(e.results).map(r => r[0]?.transcript ?? '').join(' ').trim()
       setTranscript(t)
       if (e.results[e.results.length - 1]?.isFinal) {
