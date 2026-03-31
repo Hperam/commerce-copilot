@@ -27,6 +27,8 @@ jobs:
 
       - run: npm ci
       - run: npm run build
+        env:
+          NEXT_PUBLIC_BASE_PATH: /commerce-copilot
 
       - uses: actions/upload-pages-artifact@v3
         with:
